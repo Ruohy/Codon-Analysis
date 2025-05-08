@@ -64,6 +64,7 @@ cdn=matrix(as.numeric(unlist(cdn)),nrow(cdn),ncol(cdn))
 
 #
 
+#
 #### PCA + initial visual exploration of $loadings [RUN START] ####
 
 #load data
@@ -222,7 +223,7 @@ ggplot(subset_df, aes(x = Comp.1, y = Comp.2)) +
 # colours and clustering make it hard to understand what is happening,
 # best to try to seperate PCA distributions to better compare them
 
-#### Change colours and panel groups separately ####
+#### Change colors and panel kingdoms separately ####
 # Fix the colours for original kingdom plot
 custom_palette <- c(
   "Mammals" = "#1f78b4",
@@ -282,7 +283,7 @@ ggsave(
 )
 
 
-#### PCA plot grouped by domain ####
+#### Codon usage PCA by domain ####
 Codon_usage$Domain <- NA
 Codon_usage$Domain[Codon_usage$Kingdom %in%
                     c("pri", "rod", "mam", "pln",
@@ -341,7 +342,8 @@ domain_split_panel<-ggplot(df_pca, aes(x = Comp.1, y = Comp.2, color = Domain)) 
 
 print(domain_split_panel)
 
-ggsave(
+
+#ggsave(
   filename = "Output/Domain_split_panel.png",
   plot = domain_split_panel,   # optional if it's the last plot created
   width = 8,                 # in inches
@@ -352,7 +354,8 @@ ggsave(
 
 
 
-#### Plot codon + Amino acid plot ####
+#
+#### Amino acid <- Codon plot by Kingdom####
 
 # Define codon-to-amino-acid map
 cdn_AA <- c("UUU"="Phe","UUC"="Phe","UUA"="Leu","UUG"="Leu(S)","CUU"="Leu",
@@ -393,23 +396,9 @@ amino_pca_df <- data.frame(amino_pca$x)
 amino_pca_df$Group <- Codon_usage$Group
 amino_pca_df$Kingdom <- Codon_usage$Kingdom
 
-# Define consistent group color palette
-custom_palette <- c(
-  "Mammals" = "#1f78b4",
-  "Vertebrates" = "#a6cee3",
-  "Invertebrates" = "#b2df8a",
-  "Bacteria" = "#e31a1c",
-  "Archaea" = "#fb9a99",
-  "Viruses" = "#ff7f00",
-  "Plants" = "#33a02c",
-  "Fungi" = "#cab2d6",
-  "Protists" = "#6a3d9a",
-  "Algae" = "#ffff99"
-)
-
 # Plot PCA of amino acid usage
 library(ggplot2)
-ggplot(amino_pca_df, aes(x = PC1, y = PC2, color = Group)) +
+Amino_PCA<-ggplot(amino_pca_df, aes(x = PC1, y = PC2, color = Group)) +
   geom_point(size = 3, alpha = 0.8) +
   scale_color_manual(values = custom_palette) +
   theme_minimal(base_size = 15) +
@@ -424,6 +413,92 @@ ggplot(amino_pca_df, aes(x = PC1, y = PC2, color = Group)) +
     legend.position = "right"
   )
 
+print(Amino_PCA)
+ggsave(
+  filename = "Output/Amino_PCA_Kingdom.png",
+  plot = Amino_PCA, 
+  width = 8,                 
+  height = 6,
+  dpi = 300,
+  bg = "white"
+)
+
+
+# Panel the plots separately
+Amino_PCA_split<-ggplot(amino_pca_df, aes(x = PC1, y = PC2, color = Group)) +
+  geom_point(size = 1.8, alpha = 0.8) +
+  facet_wrap(~ Group, scales = "fixed") +
+  scale_color_manual(values = custom_palette) +
+  theme_minimal()
+
+print(Amino_PCA_split)
+ggsave(
+  filename = "Output/Amino_PCA_split.png",
+  plot = Amino_PCA_split, 
+  width = 8,                 
+  height = 6,
+  dpi = 300,
+  bg = "white"
+)
+
+#### Amino acid <- Codon plot by Domain ####
+
+amino_pca <- prcomp(cdn_amino, scale. = TRUE)
+amino_pca_df <- data.frame(amino_pca$x)
+amino_pca_df$Group <- Codon_usage$Group
+amino_pca_df$Kingdom <- Codon_usage$Kingdom
+
+amino_pca_df$Domain <- NA
+amino_pca_df$Domain[Codon_usage$Kingdom %in% 
+                      c("pri", "rod", "mam", "pln", "vrt", "inv", "fun", "plm", "alg")] <- "Eukarya"
+amino_pca_df$Domain[Codon_usage$Kingdom == "bct"] <- "Bacteria"
+amino_pca_df$Domain[Codon_usage$Kingdom == "arc"] <- "Archaea"
+amino_pca_df$Domain[Codon_usage$Kingdom %in% c("vrl", "phg")] <- "Virus"
+
+Amino_PCA_Domain <- ggplot(amino_pca_df, aes(x = PC1, y = PC2, color = Domain)) +
+  geom_point(size = 2, alpha = 0.8) +
+  scale_color_manual(values = domain_colors) +
+  theme_minimal(base_size = 15) +
+  labs(
+    title = "Amino Acid Usage PCA by Domain",
+    x = paste0("PC1 (", round(100 * summary(amino_pca)$importance[2, 1], 1), "%)"),
+    y = paste0("PC2 (", round(100 * summary(amino_pca)$importance[2, 2], 1), "%)"),
+    color = "Domain"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+print(Amino_PCA_Domain)
+ggsave(
+  filename = "Output/Amino_PCA_Domain.png",
+  plot = Amino_PCA_Domain, 
+  width = 8,                 
+  height = 6,
+  dpi = 300,
+  bg = "white"
+)
+
+# Panel plots separately
+Amino_PCA_Domain_Split <- ggplot(amino_pca_df, aes(x = PC1, y = PC2, color = Domain)) +
+  geom_point(size = 2, alpha = 0.9) +
+  facet_wrap(~ Domain, scales = "fixed") +
+  scale_color_manual(values = domain_colors) +
+  theme_minimal(base_size = 14) +
+  labs(
+    title = "Amino Acid PCA Panelled by Domain",
+    x = "PC1", y = "PC2"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        strip.text = element_text(face = "bold"))
+
+print(Amino_PCA_Domain_Split)
+ggsave(
+  filename = "Output/Amino_PCA_Domain_split.png",
+  plot = Amino_PCA_Domain_split, 
+  width = 8,                 
+  height = 6,
+  dpi = 300,
+  bg = "white"
+)
 
 #### Linear Mixed Effects Regression of Amino Acid w/ PCA ####
 library(lme4)
@@ -481,6 +556,7 @@ ggsave(
 
 
 
+#
 #### GC + GC3 content ####
 
 # calculate proportion of codons that contain G or C or both in any position
