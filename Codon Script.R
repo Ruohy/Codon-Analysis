@@ -62,6 +62,7 @@ cdn=matrix(as.numeric(unlist(cdn)),nrow(cdn),ncol(cdn))
 
 
 
+#
 #### PCA + initial visual exploration of $loadings [RUN START] ####
 
 #load data
@@ -365,6 +366,7 @@ ggsave(
 )
 
 
+#
 #### Plot codon + amino acid map ####
 cdn_AA<-c("UUU"="Phe","UUC"="Phe","UUA"="Leu","UUG"="Leu(S)","CUU"="Leu",
                 "CUC"="Leu","CUA"="Leu","CUG"="Leu","AUU"="Ile","AUC"="Ile",
