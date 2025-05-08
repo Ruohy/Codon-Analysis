@@ -6,6 +6,8 @@ install.packages("dplyr")
 install.packages("tidyr")
 install.packages("RColorBrewer")
 install.packages("psych")
+install.packages("MuMIn")
+install.packages("lme4")
 
 #### Link GitHub ####
 install.packages("usethis")
@@ -56,6 +58,7 @@ cdn[cdn=="12;I"]=0
 
 #convert entire matrix to numeric
 cdn=matrix(as.numeric(unlist(cdn)),nrow(cdn),ncol(cdn))
+
 
 
 
@@ -361,16 +364,6 @@ ggsave(
   bg = "white"
 )
 
-#### Examining relatedness within kingdoms ####
-# Viruses
-# Example: focus on viruses
-virus_df <- filter(pca_df, Group == "Viruses")
-# PCA plot of viruses
-ggplot(virus_df, aes(x = Comp.1, y = Comp.2)) +
-  geom_point(color = "darkorange2", size = 2) +
-  theme_minimal() +
-  labs(title = "Codon Usage PCA Within Viruses",
-       x = "PC1", y = "PC2")
 
 #### Plot codon + amino acid map ####
 cdn_AA<-c("UUU"="Phe","UUC"="Phe","UUA"="Leu","UUG"="Leu(S)","CUU"="Leu",
@@ -464,10 +457,57 @@ ggplot(amino_pca_df, aes(x = PC1, y = PC2, color = Group)) +
     legend.position = "right"
   )
 
-#### Plot differences in start/stop codon usage ####
+#### Linear Mixed Effects Regression of Amino Acid w/ PCA ####
+library(lme4)
+library(MuMIn)  # for r.squaredGLMM()
 
+# Make sure Group and Kingdom are factors
+amino_pca_df$Group <- as.factor(amino_pca_df$Group)
+amino_pca_df$Kingdom <- as.factor(amino_pca_df$Kingdom)
 
+# Fit a linear mixed model: PC1 as outcome
+m <- lmer(PC1 ~ Group + (1 | Kingdom), data = amino_pca_df)
 
+# Summary and random effects
+summary(m)
+ranef(m)
+
+# R-squared
+r.squaredGLMM(m)
+
+# Fixed effect = differences between groups
+# Random effect = variance within the groups
+# Mammals and Vertebrates use amino acids very differently than Archaea
+# Group explains over half the variation in amino acid usage.
+# Kingdom adds meaningful structure but is secondary.
+
+# Violin plot to show variance
+library(ggplot2)
+Amino_acid_pca<-ggplot(amino_pca_df, aes(x = Group, y = PC1, fill = Group)) +
+  geom_violin(trim = FALSE, alpha = 0.7, color = NA) +
+  geom_boxplot(width = 0.1, outlier.shape = NA, fill = "white", color = "black") +
+  scale_fill_manual(values = custom_palette) +
+  theme_minimal(base_size = 14) +
+  labs(title = "Amino Acid Usage Patterns (PC1) by Biological Group",
+       x = "Group", y = "PC1 Score") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "none") + 
+  stat_summary(fun = mean, geom = "point", shape = 21, size = 2, fill = "white") +
+  stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2)
+
+# Wider spread = greater intra-group variability in amino acid usage
+# Tighter spread = more conserved patterns of usage across species in that group
+# Higher PC1 score = species use certain amino acids more in different proportions
+
+print(Amino_acid_pca)
+ggsave(
+  filename = "Output/Amino_Acid_PCA_Plot.png",
+  plot = Amino_acid_pca, 
+  width = 8,                 
+  height = 6,
+  dpi = 300,
+  bg = "white"
+)
 
 
 
