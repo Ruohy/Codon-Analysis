@@ -27,14 +27,14 @@ use_github()
 
 #### Data exploration (hclust + errors/fixes) ####
 
-#load data
+# load data
 Codon_usage<-read.csv("Data/codon_usage.csv") #load data
 View(Codon_usage) #inspect data manually
 
-# heirarchial clustering showing frequency relatedness between
+# heirarchial clustering showing codon frequency relatedness
 cdn<-Codon_usage[,6:ncol(Codon_usage)] #select only codon frequency columns
-plot(hclust(dist(t(cdn)))) #cluster to look at related/unrelated data
-#we see an outlier datapoint (CUA)
+plot(hclust(dist(t(cdn)))) # cluster to look at related/unrelated data
+# we see an outlier datapoint (CUA)
 
 #perform a principal component analysis (PCA)
 p<-princomp(cdn) #error with data (contains infinite values?)
@@ -63,6 +63,7 @@ cdn=matrix(as.numeric(unlist(cdn)),nrow(cdn),ncol(cdn))
 
 
 #
+
 #### PCA + initial visual exploration of $loadings [RUN START] ####
 
 #load data
@@ -91,10 +92,11 @@ shade[regexpr("^G",colnames(cdn))==1]="gold"
 plot(p$loadings,col=shade,pch=19) #plot again to see how it looks
 #a little more clustering, maybe something?
 
+# p$loadings = which codons contribute most to patterns
 
 #### Plot codon frequencies against kingdoms ($scores = patterns!) ####
 
-#lets try plotting relating to kingdoms
+#try plotting relating to kingdoms
 plot(p$scores,cex=0.1) # a definite pattern!
 #lets bring out some colors relating to where the kingdoms lay on this plot
 points(p$scores[Codon_usage$Kingdom=="vrl",],col="coral",cex=0.2)
@@ -149,26 +151,7 @@ pca_df$Kingdom <- Codon_usage$Kingdom
 pca_df$Group <- Codon_usage$Group
 df_pca <- data.frame(p$scores, Kingdom = Codon_usage$Kingdom)
 
-# first minimal attempt (terrible colours)
-ggplot(df_pca, aes(Comp.1, Comp.2, color = Kingdom)) + 
-  geom_point(size = 1) + 
-  theme_minimal()
-
-# define colors
-group_colors <- c(
-  "Mammals" = "deepskyblue",
-  "Vertebrates" = "dodgerblue",
-  "Invertebrates" = "turquoise4",
-  "Bacteria" = "firebrick",
-  "Archaea" = "tomato",
-  "Viruses" = "darkorange2",
-  "Plants" = "forestgreen",
-  "Fungi" = "orchid",
-  "Protists" = "darkviolet",
-  "Algae" = "springgreen3"
-)
-
-# create plot with PCA data with better colors and with ggplot
+# create plot with ggplot using group_colours
 kingdom_group_plot<-ggplot(pca_df, aes(x = Comp.1, y = Comp.2, color = Group)) +
   geom_point(size = 1, alpha = 0.7) +
   scale_color_manual(values = group_colors) +
@@ -298,6 +281,7 @@ ggsave(
   bg = "white"
 )
 
+
 #### PCA plot grouped by domain ####
 Codon_usage$Domain <- NA
 Codon_usage$Domain[Codon_usage$Kingdom %in%
@@ -356,6 +340,7 @@ domain_split_panel<-ggplot(df_pca, aes(x = Comp.1, y = Comp.2, color = Domain)) 
   )
 
 print(domain_split_panel)
+
 ggsave(
   filename = "Output/Domain_split_panel.png",
   plot = domain_split_panel,   # optional if it's the last plot created
@@ -366,56 +351,49 @@ ggsave(
 )
 
 
-#
-#### Plot codon + amino acid map ####
-cdn_AA<-c("UUU"="Phe","UUC"="Phe","UUA"="Leu","UUG"="Leu(S)","CUU"="Leu",
-                "CUC"="Leu","CUA"="Leu","CUG"="Leu","AUU"="Ile","AUC"="Ile",
-                "AUA"="Ile","AUG"="Met(S)","GUU"="Val","GUC"="Val","GUA"="Val",
-                "GUG"="Val(S)","UCU"="Ser","UCC"="Ser","UCA"="Ser","UCG"="Ser",
-                "CCU"="Pro","CCC"="Pro","CCA"="Pro","CCG"="Pro","ACU"="Thr",
-                "ACC"="Thr","ACA"="Thr","ACG"="Thr","GCU"="Ala","GCC"="Ala",
-          "GCA"="Ala","GCG"="Ala","UAU"="Tyr","UAC"="Tyr","UAA"="STOP",
-          "UAG"="STOP","CAU"="His","CAC"="His","CAA"="Gln","CAG"="Gln",
-          "AAU"="Asn","AAC"="Asn","AAA"="Lys","AAG"="Lys","GAU"="Asp",
-          "GAC"="Asp","GAA"="Glu","GAG"="Glu","UGU"="Cys","UGC"="Cys",
-          "UGA"="STOP","UGG"="Trp","CGU"="Arg","CGC"="Arg","CGA"="Arg",
-          "CGG"="Arg","AGU"="Ser","AGC"="Ser","AGA"="Arg","AGG"="Arg",
-          "GGU"="Gly","GGC"="Gly","GGA"="Gly","GGG"="Gly")
-amino_acids <- cdn_AA[colnames(cdn)] # map amino acids to col names
 
-# create a dataframe
-library(dplyr)
+#### Plot codon + Amino acid plot ####
+
+# Define codon-to-amino-acid map
+cdn_AA <- c("UUU"="Phe","UUC"="Phe","UUA"="Leu","UUG"="Leu(S)","CUU"="Leu",
+            "CUC"="Leu","CUA"="Leu","CUG"="Leu","AUU"="Ile","AUC"="Ile",
+            "AUA"="Ile","AUG"="Met(S)","GUU"="Val","GUC"="Val","GUA"="Val",
+            "GUG"="Val(S)","UCU"="Ser","UCC"="Ser","UCA"="Ser","UCG"="Ser",
+            "CCU"="Pro","CCC"="Pro","CCA"="Pro","CCG"="Pro","ACU"="Thr",
+            "ACC"="Thr","ACA"="Thr","ACG"="Thr","GCU"="Ala","GCC"="Ala",
+            "GCA"="Ala","GCG"="Ala","UAU"="Tyr","UAC"="Tyr","UAA"="STOP",
+            "UAG"="STOP","CAU"="His","CAC"="His","CAA"="Gln","CAG"="Gln",
+            "AAU"="Asn","AAC"="Asn","AAA"="Lys","AAG"="Lys","GAU"="Asp",
+            "GAC"="Asp","GAA"="Glu","GAG"="Glu","UGU"="Cys","UGC"="Cys",
+            "UGA"="STOP","UGG"="Trp","CGU"="Arg","CGC"="Arg","CGA"="Arg",
+            "CGG"="Arg","AGU"="Ser","AGC"="Ser","AGA"="Arg","AGG"="Arg",
+            "GGU"="Gly","GGC"="Gly","GGA"="Gly","GGG"="Gly")
+
+# Create long format codon data
+library(tidyr)
 cdn_aa_df <- as.data.frame(cdn)
 cdn_aa_df$Sample <- 1:nrow(cdn_aa_df)
 
-# Reshape to long,format,group, then pivot back to long format
-library(tidyr)
-cdn_long <- pivot_longer(cdn_aa_df, -Sample, names_to = "Codon",
-                         values_to = "Freq")
+cdn_long <- pivot_longer(cdn_aa_df, -Sample, names_to = "Codon", values_to = "Freq")
 cdn_long$AminoAcid <- cdn_AA[cdn_long$Codon]
 
-# Get average codon frequencies per amino acid per sample
+# Average codon frequency per amino acid per sample
+library(dplyr)
 amino_summary <- cdn_long %>%
   group_by(Sample, AminoAcid) %>%
   summarise(MeanFreq = mean(as.numeric(Freq)), .groups = "drop")
 
-# Pivot back to wide matrix: samples x amino acids
-cdn_amino <- pivot_wider(amino_summary,
-                         names_from = AminoAcid, values_from = MeanFreq)
-cdn_amino <- as.data.frame(cdn_amino[,-1])  # remove 'Sample' column
+# Convert to wide format: samples × amino acids
+cdn_amino <- pivot_wider(amino_summary, names_from = AminoAcid, values_from = MeanFreq)
+cdn_amino <- as.data.frame(cdn_amino[,-1])  # drop sample column
 
 # PCA on amino acid usage
-# Run PCA
-p2 <- prcomp(cdn_amino, scale. = TRUE)
-plot(p2$x[,1:2], col = "blue", pch = 19, main = "PCA on Amino Acid Frequencies")
+amino_pca <- prcomp(cdn_amino, scale. = TRUE)
+amino_pca_df <- data.frame(amino_pca$x)
+amino_pca_df$Group <- Codon_usage$Group
+amino_pca_df$Kingdom <- Codon_usage$Kingdom
 
-# Comparing by kingdom option
-plot(p2$x[,1:2], col = as.factor(Codon_usage$Kingdom), pch = 19,
-     main = "Amino Acid Codon Usage by Kingdom")
-legend("topright", legend = unique(Codon_usage$Kingdom),
-       col = 1:length(unique(Codon_usage$Kingdom)), pch = 19)
-
-# Optional colour palatte with more contrast
+# Define consistent group color palette
 custom_palette <- c(
   "Mammals" = "#1f78b4",
   "Vertebrates" = "#a6cee3",
@@ -428,21 +406,8 @@ custom_palette <- c(
   "Protists" = "#6a3d9a",
   "Algae" = "#ffff99"
 )
-# Then swap out with this up above (this is better)
-scale_color_manual(values = custom_palette)
 
-#We plotted the wrong thing there, heres the fix
-amino_pca <- prcomp(cdn_amino, scale. = TRUE)
-# Create a fresh dataframe for plotting
-amino_pca_df <- data.frame(amino_pca$x)
-# Add sample groupings from your metadata
-amino_pca_df$Group <- Codon_usage$Group
-amino_pca_df$Kingdom <- Codon_usage$Kingdom
-library(RColorBrewer)
-# Get unique groups and assign a colour
-groups <- unique(amino_pca_df$Group)
-palette <- brewer.pal(n = min(length(groups), 12), name = "Set3")
-names(palette) <- groups
+# Plot PCA of amino acid usage
 library(ggplot2)
 ggplot(amino_pca_df, aes(x = PC1, y = PC2, color = Group)) +
   geom_point(size = 3, alpha = 0.8) +
@@ -458,6 +423,7 @@ ggplot(amino_pca_df, aes(x = PC1, y = PC2, color = Group)) +
     plot.title = element_text(hjust = 0.5, face = "bold"),
     legend.position = "right"
   )
+
 
 #### Linear Mixed Effects Regression of Amino Acid w/ PCA ####
 library(lme4)
@@ -512,4 +478,40 @@ ggsave(
 )
 
 
+
+
+
+#### GC + GC3 content ####
+
+# calculate proportion of codons that contain G or C or both in any position
+gc_codons <- colnames(cdn)[grepl("[GC]",colnames(cdn))] #isolate only GC codons
+GC_content <- rowSums(cdn[, gc_codons], na.rm = TRUE) #sum per species
+
+# Filter only codons that have G or C in the third position
+gc3_codons <- colnames(cdn)[substr(colnames(cdn), 3, 3) %in% c("G", "C")]
+GC3_content <- rowSums(cdn[, gc3_codons], na.rm = TRUE)
+
+# Add to dataframe
+amino_pca_df$GC_content <- GC_content
+amino_pca_df$GC3_content <- GC3_content
+
+library(ggplot2)
+
+ggplot(amino_pca_df, aes(x = GC_content, y = PC1, color = Group)) +
+  geom_point(alpha = 0.5, size = 1) +
+  geom_smooth(method = "lm", se = TRUE, color = "black") +
+  scale_color_manual(values = custom_palette) +
+  theme_minimal(base_size = 14) +
+  labs(title = "PC1 vs GC Content by Group",
+       x = "GC Content", y = "PC1 (Amino Acid Usage)") +
+  theme(legend.position = "right",
+        axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(amino_pca_df, aes(x = GC_content, y = PC1)) +
+  geom_point(alpha = 0.4, size = 1) +
+  geom_smooth(method = "lm", color = "blue") +
+  facet_wrap(~ Group) +
+  theme_minimal(base_size = 14) +
+  labs(title = "PC1 vs GC Content by Group",
+       x = "GC Content", y = "PC1 (Amino Acid Usage)")
 
