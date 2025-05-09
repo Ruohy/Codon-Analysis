@@ -64,7 +64,6 @@ cdn=matrix(as.numeric(unlist(cdn)),nrow(cdn),ncol(cdn))
 
 #
 
-#
 #### PCA + initial visual exploration of $loadings [RUN START] ####
 
 #load data
@@ -341,18 +340,14 @@ domain_split_panel<-ggplot(df_pca, aes(x = Comp.1, y = Comp.2, color = Domain)) 
   )
 
 print(domain_split_panel)
-
-
-#ggsave(
+ggsave(
   filename = "Output/Domain_split_panel.png",
-  plot = domain_split_panel,   # optional if it's the last plot created
-  width = 8,                 # in inches
+  plot = domain_split_panel,   
+  width = 8,                 
   height = 6,
   dpi = 300,
   bg = "white"
 )
-
-
 
 #
 #### Amino acid <- Codon plot by Kingdom####
@@ -504,27 +499,23 @@ ggsave(
 library(lme4)
 library(MuMIn)  # for r.squaredGLMM()
 
-# Make sure Group and Kingdom are factors
 amino_pca_df$Group <- as.factor(amino_pca_df$Group)
 amino_pca_df$Kingdom <- as.factor(amino_pca_df$Kingdom)
-
-# Fit a linear mixed model: PC1 as outcome
+# Make sure Group and Kingdom are factors
 m <- lmer(PC1 ~ Group + (1 | Kingdom), data = amino_pca_df)
-
-# Summary and random effects
 summary(m)
 ranef(m)
-
-# R-squared
 r.squaredGLMM(m)
 
 # Fixed effect = differences between groups
 # Random effect = variance within the groups
-# Mammals and Vertebrates use amino acids very differently than Archaea
-# Group explains over half the variation in amino acid usage.
 # Kingdom adds meaningful structure but is secondary.
 
 # Violin plot to show variance
+# Wider spread = greater intra-group variability in amino acid usage
+# Tighter spread = more conserved patterns of usage across species in that group
+# Higher PC1 score = species use certain amino acids more in different proportions
+
 library(ggplot2)
 Amino_acid_pca<-ggplot(amino_pca_df, aes(x = Group, y = PC1, fill = Group)) +
   geom_violin(trim = FALSE, alpha = 0.7, color = NA) +
@@ -538,10 +529,6 @@ Amino_acid_pca<-ggplot(amino_pca_df, aes(x = Group, y = PC1, fill = Group)) +
   stat_summary(fun = mean, geom = "point", shape = 21, size = 2, fill = "white") +
   stat_summary(fun.data = mean_cl_normal, geom = "errorbar", width = 0.2)
 
-# Wider spread = greater intra-group variability in amino acid usage
-# Tighter spread = more conserved patterns of usage across species in that group
-# Higher PC1 score = species use certain amino acids more in different proportions
-
 print(Amino_acid_pca)
 ggsave(
   filename = "Output/Amino_Acid_PCA_Plot.png",
@@ -552,11 +539,6 @@ ggsave(
   bg = "white"
 )
 
-
-
-
-
-#
 #### GC + GC3 content ####
 
 # calculate proportion of codons that contain G or C or both in any position
@@ -590,4 +572,22 @@ ggplot(amino_pca_df, aes(x = GC_content, y = PC1)) +
   theme_minimal(base_size = 14) +
   labs(title = "PC1 vs GC Content by Group",
        x = "GC Content", y = "PC1 (Amino Acid Usage)")
+
+ggplot(amino_pca_df, aes(x = GC3_content, y = PC1, color = Group)) +
+  geom_point(alpha = 0.5, size = 1) +
+  geom_smooth(method = "lm", se = TRUE, color = "black") +
+  scale_color_manual(values = custom_palette) +
+  theme_minimal(base_size = 14) +
+  labs(title = "PC1 vs GC3 Content by Group",
+       x = "GC3 Content", y = "PC1 (Amino Acid Usage)") +
+  theme(legend.position = "right",
+        axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(amino_pca_df, aes(x = GC3_content, y = PC1)) +
+  geom_point(alpha = 0.4, size = 1) +
+  geom_smooth(method = "lm", color = "blue") +
+  facet_wrap(~ Group) +
+  theme_minimal(base_size = 14) +
+  labs(title = "PC1 vs GC3 Content by Group",
+       x = "GC3 Content", y = "PC1 (Amino Acid Usage)")
 
