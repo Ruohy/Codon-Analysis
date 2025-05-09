@@ -105,16 +105,18 @@ points(p$scores[Codon_usage$Kingdom %in%
 
 #grouping some kingdoms together to reduce unnecessary clutter
 Codon_usage$Group <- NA
-Codon_usage$Group[Codon_usage$Kingdom %in% c("pri", "rod", "mam")] <- "Mammals"
+Codon_usage$Group[Codon_usage$Kingdom %in% c("mam", "pri", "rod")] <- "Mammals"
 Codon_usage$Group[Codon_usage$Kingdom == "vrt"] <- "Vertebrates"
 Codon_usage$Group[Codon_usage$Kingdom == "inv"] <- "Invertebrates"
-Codon_usage$Group[Codon_usage$Kingdom %in% c("bct")] <- "Bacteria"
-Codon_usage$Group[Codon_usage$Kingdom %in% c("arc")] <- "Archaea"
+Codon_usage$Group[Codon_usage$Kingdom == "bct"] <- "Bacteria"
+Codon_usage$Group[Codon_usage$Kingdom == "arc"] <- "Archaea"
 Codon_usage$Group[Codon_usage$Kingdom %in% c("vrl", "phg")] <- "Viruses"
 Codon_usage$Group[Codon_usage$Kingdom == "pln"] <- "Plants"
-Codon_usage$Group[Codon_usage$Kingdom == "fun"] <- "Fungi"
-Codon_usage$Group[Codon_usage$Kingdom == "plm"] <- "Protists"
-Codon_usage$Group[Codon_usage$Kingdom == "alg"] <- "Algae"
+Codon_usage$Group[Codon_usage$Kingdom %in% "plm"] <- "Protists"
+
+pca_df <- data.frame(p$scores)
+pca_df$Group <- Codon_usage$Group
+pca_df$Kingdom <- Codon_usage$Kingdom
 
 #assign colors to these groups
 group_colors <- c(
@@ -125,9 +127,7 @@ group_colors <- c(
   "Archaea" = "tomato",
   "Viruses" = "darkorange2",
   "Plants" = "forestgreen",
-  "Fungi" = "orchid",
   "Protists" = "darkviolet",
-  "Algae" = "springgreen3"
 )
 # Create plot using scores from PCA
 plot(p$scores, type = "n", main = "Codon Usage PCA by Biological Group")
@@ -141,7 +141,7 @@ legend("bottomright", legend = names(group_colors),
 #Maybe make a nicer looking plot using ggplot2
   
 
-#### An alternative plot with ggplot2 ####
+#### Codon PCA plot with ggplot2 ####
 
 library(ggplot2) # load package
 
@@ -151,7 +151,6 @@ pca_df$Kingdom <- Codon_usage$Kingdom
 pca_df$Group <- Codon_usage$Group
 df_pca <- data.frame(p$scores, Kingdom = Codon_usage$Kingdom)
 
-# create plot with ggplot using group_colours
 kingdom_group_plot<-ggplot(pca_df, aes(x = Comp.1, y = Comp.2, color = Group)) +
   geom_point(size = 1, alpha = 0.7) +
   scale_color_manual(values = group_colors) +
@@ -222,19 +221,16 @@ ggplot(subset_df, aes(x = Comp.1, y = Comp.2)) +
 # colours and clustering make it hard to understand what is happening,
 # best to try to seperate PCA distributions to better compare them
 
-#### Change colors and panel kingdoms separately ####
-# Fix the colours for original kingdom plot
+# Change the colours?
 custom_palette <- c(
-  "Mammals" = "#1f78b4",
-  "Vertebrates" = "#a6cee3",
-  "Invertebrates" = "#b2df8a",
-  "Bacteria" = "#e31a1c",
-  "Archaea" = "#fb9a99",
-  "Viruses" = "#ff7f00",
-  "Plants" = "#33a02c",
-  "Fungi" = "#cab2d6",
-  "Protists" = "#6a3d9a",
-  "Algae" = "#ffff99"
+  "Mammals" = "#1f78b4",         
+  "Vertebrates" = "#559ccf",     
+  "Invertebrates" = "#76b76a",   
+  "Bacteria" = "#e31a1c",        
+  "Archaea" = "#d85f71",         
+  "Viruses" = "#ff7f00",         
+  "Plants" = "#33a02c",          
+  "Protists" = "#6a3d9a"         
 )
 
 # Re-plot with fixed colours
@@ -264,14 +260,38 @@ ggsave(
   bg = "white"
 )
 
-# Option to split the view between groups
-KG_PCA_split<-ggplot(pca_df, aes(x = Comp.1, y = Comp.2, color = Group)) +
-  geom_point(size = 1.8, alpha = 0.8) +
-  facet_wrap(~ Group, scales = "free") +
+# Split the view between groups
+library(ggplot2)
+library(dplyr)
+
+pca_df$Group <- factor(pca_df$Group)
+
+gray_df <- expand.grid(FacetGroup = levels(pca_df$Group),
+                       Row = 1:nrow(pca_df)) %>%
+  mutate(Comp.1 = pca_df$Comp.1[Row],
+         Comp.2 = pca_df$Comp.2[Row])
+
+color_df <- pca_df %>%
+  mutate(FacetGroup = Group)
+
+KG_PCA_split <- ggplot() +
+  geom_point(data = gray_df,
+             aes(x = Comp.1, y = Comp.2),
+             color = "gray80", size = 1.2, alpha = 0.5) +
+  geom_point(data = color_df,
+             aes(x = Comp.1, y = Comp.2, color = Group),
+             size = 1.6, alpha = 0.85) +
+  facet_wrap(~ FacetGroup, scales = "fixed") +
   scale_color_manual(values = custom_palette) +
-  theme_minimal()
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none") +
+  labs(
+    title = "Codon Usage PCA — Group Highlighted per Panel",
+    x = "PC1", y = "PC2"
+  )
 
 print(KG_PCA_split)
+
 ggsave(
   filename = "Output/KG_PCA_split.png",
   plot = KG_PCA_split,   # optional if it's the last plot created
@@ -304,6 +324,7 @@ domain_colors <- c(
 df_pca <- data.frame(p$scores)
 
 library(ggplot2)
+library(dplyr)
 
 df_pca$Domain <- Codon_usage$Domain
 
@@ -324,19 +345,36 @@ ggsave(
 
 # plot 4 domains separately and panel because there's too much overlap
 
-domain_split_panel<-ggplot(df_pca, aes(x = Comp.1, y = Comp.2, color = Domain)) +
-  geom_point(size = 1, alpha = 1) +
+# Ensure Domain is a factor
+df_pca$Domain <- factor(df_pca$Domain)
+
+gray_df <- expand.grid(FacetDomain = levels(df_pca$Domain),
+                       Row = 1:nrow(df_pca)) %>%
+  mutate(Comp.1 = df_pca$Comp.1[Row],
+         Comp.2 = df_pca$Comp.2[Row])
+
+color_df <- df_pca %>%
+  mutate(FacetDomain = Domain)
+
+
+domain_split_panel <- ggplot() +
+  geom_point(data = gray_df,
+             aes(x = Comp.1, y = Comp.2),
+             color = "gray80", size = 1.2, alpha = 0.5) +
+  geom_point(data = color_df,
+             aes(x = Comp.1, y = Comp.2, color = Domain),
+             size = 1.6, alpha = 0.85) +
+  facet_wrap(~ FacetDomain) +
   scale_color_manual(values = domain_colors) +
-  facet_wrap(~ Domain) +
   theme_minimal(base_size = 14) +
   labs(
-    title = "PCA of Codon Usage Panelled by Domain",
-    x = "PC1",
-    y = "PC2"
+    title = "Codon Usage PCA — Domain Highlighted per Panel",
+    x = "PC1", y = "PC2"
   ) +
   theme(
     strip.text = element_text(face = "bold", size = 14),
-    plot.title = element_text(hjust = 0.5, face = "bold")
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    legend.position = "none"
   )
 
 print(domain_split_panel)
@@ -350,7 +388,7 @@ ggsave(
 )
 
 #
-#### Amino acid <- Codon plot by Kingdom####
+#### Amino acid <- Codon plot by Kingdom ####
 
 # Define codon-to-amino-acid map
 cdn_AA <- c("UUU"="Phe","UUC"="Phe","UUA"="Leu","UUG"="Leu(S)","CUU"="Leu",
@@ -394,7 +432,7 @@ amino_pca_df$Kingdom <- Codon_usage$Kingdom
 # Plot PCA of amino acid usage
 library(ggplot2)
 Amino_PCA<-ggplot(amino_pca_df, aes(x = PC1, y = PC2, color = Group)) +
-  geom_point(size = 3, alpha = 0.8) +
+  geom_point(size =2, alpha = 0.8) +
   scale_color_manual(values = custom_palette) +
   theme_minimal(base_size = 15) +
   labs(
@@ -419,12 +457,35 @@ ggsave(
 )
 
 
-# Panel the plots separately
-Amino_PCA_split<-ggplot(amino_pca_df, aes(x = PC1, y = PC2, color = Group)) +
-  geom_point(size = 1.8, alpha = 0.8) +
-  facet_wrap(~ Group, scales = "fixed") +
+# Amino acid usage by Kingdom split plot
+library(dplyr)
+library(ggplot2)
+
+amino_pca_df$Group <- factor(amino_pca_df$Group)
+
+gray_amino_df <- expand.grid(FacetGroup = levels(amino_pca_df$Group),
+                             Row = 1:nrow(amino_pca_df)) %>%
+  mutate(PC1 = amino_pca_df$PC1[Row],
+         PC2 = amino_pca_df$PC2[Row])
+
+color_amino_df <- amino_pca_df %>%
+  mutate(FacetGroup = Group)
+
+Amino_PCA_split <- ggplot() +
+  geom_point(data = gray_amino_df,
+             aes(x = PC1, y = PC2),
+             color = "gray80", size = 1.2, alpha = 0.5) +
+  geom_point(data = color_amino_df,
+             aes(x = PC1, y = PC2, color = Group),
+             size = 1.8, alpha = 0.85) +
+  facet_wrap(~ FacetGroup, scales = "fixed") +
   scale_color_manual(values = custom_palette) +
-  theme_minimal()
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none") +
+  labs(
+    title = "Amino Acid Usage PCA — Group Highlighted per Panel",
+    x = "PC1", y = "PC2"
+  )
 
 print(Amino_PCA_split)
 ggsave(
@@ -473,22 +534,43 @@ ggsave(
 )
 
 # Panel plots separately
-Amino_PCA_Domain_Split <- ggplot(amino_pca_df, aes(x = PC1, y = PC2, color = Domain)) +
-  geom_point(size = 2, alpha = 0.9) +
-  facet_wrap(~ Domain, scales = "fixed") +
+library(dplyr)
+library(ggplot2)
+
+amino_pca_df$Domain <- factor(amino_pca_df$Domain)
+
+gray_domain_df <- expand.grid(FacetDomain = levels(amino_pca_df$Domain),
+                              Row = 1:nrow(amino_pca_df)) %>%
+  mutate(PC1 = amino_pca_df$PC1[Row],
+         PC2 = amino_pca_df$PC2[Row])
+
+color_domain_df <- amino_pca_df %>%
+  mutate(FacetDomain = Domain)
+
+Amino_PCA_Domain_Split <- ggplot() +
+  geom_point(data = gray_domain_df,
+             aes(x = PC1, y = PC2),
+             color = "gray80", size = 1.2, alpha = 0.5) +
+  geom_point(data = color_domain_df,
+             aes(x = PC1, y = PC2, color = Domain),
+             size = 1.8, alpha = 0.85) +
+  facet_wrap(~ FacetDomain, scales = "fixed") +
   scale_color_manual(values = domain_colors) +
   theme_minimal(base_size = 14) +
   labs(
-    title = "Amino Acid PCA Panelled by Domain",
+    title = "Amino Acid Usage PCA — Domain Highlighted per Panel",
     x = "PC1", y = "PC2"
   ) +
-  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
-        strip.text = element_text(face = "bold"))
+  theme(
+    strip.text = element_text(face = "bold", size = 14),
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    legend.position = "none"
+  )
 
 print(Amino_PCA_Domain_Split)
 ggsave(
   filename = "Output/Amino_PCA_Domain_split.png",
-  plot = Amino_PCA_Domain_split, 
+  plot = Amino_PCA_Domain_Split, 
   width = 8,                 
   height = 6,
   dpi = 300,
@@ -543,7 +625,8 @@ ggsave(
 
 # calculate proportion of codons that contain G or C or both in any position
 gc_codons <- colnames(cdn)[grepl("[GC]",colnames(cdn))] #isolate only GC codons
-GC_content <- rowSums(cdn[, gc_codons], na.rm = TRUE) #sum per species
+GC_content <- rowSums(cdn[, gc_codons], na.rm = TRUE)/1.00008
+# scaled down by 1.00008 because of a miscalculation that caused a range of over 1.0
 
 # Filter only codons that have G or C in the third position
 gc3_codons <- colnames(cdn)[substr(colnames(cdn), 3, 3) %in% c("G", "C")]
@@ -555,9 +638,9 @@ amino_pca_df$GC3_content <- GC3_content
 
 library(ggplot2)
 
-#GC content + split plot
-ggplot(amino_pca_df, aes(x = GC_content, y = PC1, color = Group)) +
-  geom_point(alpha = 0.5, size = 1) +
+#GC content
+GC_PC1_plot<-ggplot(amino_pca_df, aes(x = GC_content, y = PC1, color = Group)) +
+  geom_point(alpha = 0.7, size = 2) +
   geom_smooth(method = "lm", se = TRUE, color = "black") +
   scale_color_manual(values = custom_palette) +
   theme_minimal(base_size = 14) +
@@ -566,17 +649,64 @@ ggplot(amino_pca_df, aes(x = GC_content, y = PC1, color = Group)) +
   theme(legend.position = "right",
         axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggplot(amino_pca_df, aes(x = GC_content, y = PC1)) +
-  geom_point(alpha = 0.4, size = 1) +
-  geom_smooth(method = "lm", color = "blue") +
-  facet_wrap(~ Group) +
-  theme_minimal(base_size = 14) +
-  labs(title = "PC1 vs GC Content by Group",
-       x = "GC Content", y = "PC1 (Amino Acid Usage)")
+print(GC_PC1_plot)
+ggsave(
+  filename = "Output/GC_PC1_plot.png",
+  plot = GC_PC1_plot, 
+  width = 8,                 
+  height = 6,
+  dpi = 300,
+  bg = "white"
+)
 
-#GC3 content + split plot
-ggplot(amino_pca_df, aes(x = GC3_content, y = PC1, color = Group)) +
-  geom_point(alpha = 0.5, size = 1) +
+#GC content split plot
+library(dplyr)
+library(ggplot2)
+
+amino_pca_df$Group <- factor(amino_pca_df$Group)
+
+gray_gc_df <- expand.grid(FacetGroup = levels(amino_pca_df$Group),
+                          Row = 1:nrow(amino_pca_df)) %>%
+  mutate(GC_content = amino_pca_df$GC_content[Row],
+         PC1 = amino_pca_df$PC1[Row])
+
+color_gc_df <- amino_pca_df %>%
+  mutate(FacetGroup = Group)
+
+GC_PC1_facet_plot <- ggplot() +
+  geom_point(data = gray_gc_df,
+             aes(x = GC_content, y = PC1),
+             color = "gray80", size = 1, alpha = 0.4) +
+  geom_point(data = color_gc_df,
+             aes(x = GC_content, y = PC1, color = Group),
+             size = 1.5, alpha = 0.85) +
+  geom_smooth(data = color_gc_df,
+              aes(x = GC_content, y = PC1),
+              method = "lm", se = TRUE, linewidth = 0.8, color = 'black') +
+  facet_wrap(~ FacetGroup, scales = "fixed") +
+  scale_color_manual(values = custom_palette) +
+  theme_minimal(base_size = 14) +
+  labs(
+    title = "PC1 vs GC Content — Group Highlighted per Panel",
+    x = "GC Content", y = "PC1 (Amino Acid Usage)"
+  ) +
+  theme(legend.position = "none",
+        strip.text = element_text(face = "bold"),
+        plot.title = element_text(hjust = 0.5, face = "bold"))
+
+print(GC_PC1_facet_plot)
+ggsave(
+  filename = "Output/GC_PC1_facet_plot.png",
+  plot = GC_PC1_facet_plot, 
+  width = 8,                 
+  height = 6,
+  dpi = 300,
+  bg = "white"
+)
+
+#GC3 content
+GC3_PC1_plot<-ggplot(amino_pca_df, aes(x = GC3_content, y = PC1, color = Group)) +
+  geom_point(alpha = 0.7, size = 2) +
   geom_smooth(method = "lm", se = TRUE, color = "black") +
   scale_color_manual(values = custom_palette) +
   theme_minimal(base_size = 14) +
@@ -585,13 +715,112 @@ ggplot(amino_pca_df, aes(x = GC3_content, y = PC1, color = Group)) +
   theme(legend.position = "right",
         axis.text.x = element_text(angle = 45, hjust = 1))
 
-ggplot(amino_pca_df, aes(x = GC3_content, y = PC1)) +
-  geom_point(alpha = 0.4, size = 1) +
-  geom_smooth(method = "lm", color = "blue") +
-  facet_wrap(~ Group) +
+print(GC3_PC1_plot)
+ggsave(
+  filename = "Output/GC3_PC1_plot.png",
+  plot = GC3_PC1_plot, 
+  width = 8,                 
+  height = 6,
+  dpi = 300,
+  bg = "white"
+)
+
+#GC3 content split plot
+library(dplyr)
+library(ggplot2)
+
+amino_pca_df$Group <- factor(amino_pca_df$Group)
+
+gray_gc3_df <- expand.grid(FacetGroup = levels(amino_pca_df$Group),
+                           Row = 1:nrow(amino_pca_df)) %>%
+  mutate(GC3_content = amino_pca_df$GC3_content[Row],
+         PC1 = amino_pca_df$PC1[Row])
+
+color_gc3_df <- amino_pca_df %>%
+  mutate(FacetGroup = Group)
+
+GC3_PC1_facet_plot <- ggplot() +
+  geom_point(data = gray_gc3_df,
+             aes(x = GC3_content, y = PC1),
+             color = "gray80", size = 1, alpha = 0.4) +
+  geom_point(data = color_gc3_df,
+             aes(x = GC3_content, y = PC1, color = Group),
+             size = 1.5, alpha = 0.85) +
+  geom_smooth(data = color_gc3_df,
+              aes(x = GC3_content, y = PC1),
+              method = "lm", se = TRUE, size = 0.8, color = "black") +
+  facet_wrap(~ FacetGroup, scales = "fixed") +
+  scale_color_manual(values = custom_palette) +
   theme_minimal(base_size = 14) +
-  labs(title = "PC1 vs GC3 Content by Group",
-       x = "GC3 Content", y = "PC1 (Amino Acid Usage)")
+  labs(
+    title = "PC1 vs GC3 Content — Group Highlighted per Panel",
+    x = "GC3 Content", y = "PC1 (Amino Acid Usage)"
+  ) +
+  theme(legend.position = "none",
+        strip.text = element_text(face = "bold"),
+        plot.title = element_text(hjust = 0.5, face = "bold"))
+
+print(GC3_PC1_facet_plot)
+ggsave(
+  filename = "Output/GC3_PC1_facet_plot.png",
+  plot = GC3_PC1_facet_plot, 
+  width = 8,                 
+  height = 6,
+  dpi = 300,
+  bg = "white"
+)
+
+#### Meaningful LMER with PCA ####
+
+q <- qnorm(GC_content)
+
+m1 <- lmer(PC1 ~ Codon_usage$Ncodons + qnorm(GC_content) + qnorm(GC3_content) + 
+            (1 | Group) + (1| Codon_usage$DNAtype) + 
+             (1 | Kingdom), data = amino_pca_df)
+summary(m1)
+ranef(m1)
+r.squaredGLMM(m1)
+
+m2 <- lmer(PC2 ~ Codon_usage$Ncodons + qnorm(GC_content) + qnorm(GC3_content) + 
+            (1 | Group) + (1| Codon_usage$DNAtype) + 
+             (1 | Kingdom), data = amino_pca_df)
+summary(m2)
+ranef(m2)
+r.squaredGLMM(m2)
+
+#### Quick tests done with John ####
+table(Codon_usage$DNAtype)
+
+m <- lmer(amino_pca_df$PC1 ~ log(Ncodons) + (1 | Group) + (1 | DNAtype) + (1 | Kingdom), data = Codon_usage)
+summary(m)
+ranef(m)
+rand(m)
+r.squaredGLMM(m)
 
 
-#### Compare R squared for GC and GC3 ####
+m <- lmer(amino_pca_df$PC2 ~ log(Ncodons) + (1 | Group) + (1 | DNAtype) + (1 | Kingdom), data = Codon_usage)
+summary(m)
+ranef(m)
+rand(m)
+r.squaredGLMM(m)
+
+hist(Codon_usage$Ncodons)
+
+m <- lmer(log(Ncodons) ~ amino_pca_df$PC2 + amino_pca_df$PC1 + (1 | Group) + (1 | DNAtype), data = Codon_usage)
+summary(m)
+ranef(m)
+rand(m)
+r.squaredGLMM(m)
+
+hist(qnorm(GC_content))
+
+plot(hclust(dist(t(cdn_amino))))
+
+plot(p$scores,cex=0.1), 
+points(p$scores[Codon_usage$DNAtype==0,],col="coral",cex=0.5),
+points(p$scores[Codon_usage$DNAtype==1,],col="blue",cex=0.5),
+points(p$scores[Codon_usage$DNAtype==2,],col="green",cex=0.5)
+
+plot(p$scores,cex=log(Codon_usage$Ncodons)/10, col=hsv(h=pnorm(scale(log(Codon_usage$Ncodons)))))
+
+     
