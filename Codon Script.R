@@ -555,6 +555,7 @@ amino_pca_df$GC3_content <- GC3_content
 
 library(ggplot2)
 
+#GC content + split plot
 ggplot(amino_pca_df, aes(x = GC_content, y = PC1, color = Group)) +
   geom_point(alpha = 0.5, size = 1) +
   geom_smooth(method = "lm", se = TRUE, color = "black") +
@@ -573,6 +574,7 @@ ggplot(amino_pca_df, aes(x = GC_content, y = PC1)) +
   labs(title = "PC1 vs GC Content by Group",
        x = "GC Content", y = "PC1 (Amino Acid Usage)")
 
+#GC3 content + split plot
 ggplot(amino_pca_df, aes(x = GC3_content, y = PC1, color = Group)) +
   geom_point(alpha = 0.5, size = 1) +
   geom_smooth(method = "lm", se = TRUE, color = "black") +
@@ -591,3 +593,5 @@ ggplot(amino_pca_df, aes(x = GC3_content, y = PC1)) +
   labs(title = "PC1 vs GC3 Content by Group",
        x = "GC3 Content", y = "PC1 (Amino Acid Usage)")
 
+
+#### Compare R squared for GC and GC3 ####
