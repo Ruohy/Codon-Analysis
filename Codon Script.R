@@ -127,7 +127,7 @@ group_colors <- c(
   "Archaea" = "tomato",
   "Viruses" = "darkorange2",
   "Plants" = "forestgreen",
-  "Protists" = "darkviolet",
+  "Protists" = "darkviolet"
 )
 # Create plot using scores from PCA
 plot(p$scores, type = "n", main = "Codon Usage PCA by Biological Group")
@@ -587,6 +587,7 @@ amino_pca_df$Kingdom <- as.factor(amino_pca_df$Kingdom)
 m <- lmer(PC1 ~ Group + (1 | Kingdom), data = amino_pca_df)
 summary(m)
 ranef(m)
+rand(m)
 r.squaredGLMM(m)
 
 # Fixed effect = differences between groups
@@ -779,6 +780,7 @@ m1 <- lmer(PC1 ~ Codon_usage$Ncodons + qnorm(GC_content) + qnorm(GC3_content) +
              (1 | Kingdom), data = amino_pca_df)
 summary(m1)
 ranef(m1)
+rand(m1)
 r.squaredGLMM(m1)
 
 m2 <- lmer(PC2 ~ Codon_usage$Ncodons + qnorm(GC_content) + qnorm(GC3_content) + 
@@ -786,6 +788,7 @@ m2 <- lmer(PC2 ~ Codon_usage$Ncodons + qnorm(GC_content) + qnorm(GC3_content) +
              (1 | Kingdom), data = amino_pca_df)
 summary(m2)
 ranef(m2)
+rand(m2)
 r.squaredGLMM(m2)
 
 #### Quick tests done with John ####
