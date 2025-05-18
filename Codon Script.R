@@ -827,3 +827,4 @@ points(p$scores[Codon_usage$DNAtype==2,],col="green",cex=0.5)
 plot(p$scores,cex=log(Codon_usage$Ncodons)/10, col=hsv(h=pnorm(scale(log(Codon_usage$Ncodons)))))
 
      
+#### Rearrange figures for report ####
