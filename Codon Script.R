@@ -791,6 +791,17 @@ ranef(m2)
 rand(m2)
 r.squaredGLMM(m2)
 
+#### Assumptions Testing of m2 LMER ####
+qqnorm(resid(m2))
+qqline(resid(m2))
+
+# Histogram and residuals vs fitted as additional checks
+png(filename = "Output/residuals_distribution.png", width = 800, height = 600)
+hist(resid(m2), breaks = 50, main = "Histogram of Residuals", xlab = "Residuals")
+dev.off()
+
+plot(fitted(m2), resid(m2), main = "Residuals vs Fitted")
+
 #### Quick tests done with John ####
 table(Codon_usage$DNAtype)
 
@@ -827,4 +838,3 @@ points(p$scores[Codon_usage$DNAtype==2,],col="green",cex=0.5)
 plot(p$scores,cex=log(Codon_usage$Ncodons)/10, col=hsv(h=pnorm(scale(log(Codon_usage$Ncodons)))))
 
      
-#### Rearrange figures for report ####
